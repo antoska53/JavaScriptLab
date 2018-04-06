@@ -1,0 +1,60 @@
+﻿<html>
+<head>
+    <title>Splitting Query String</title>
+    <link rel="icon" type="image/png" href="../Images/favicon.png" />
+    <style>
+        body {
+            font-family: Arial;
+            font-size: 90%;
+            padding: 0px 10px;
+        }
+
+        table {
+            border-collapse: collapse;
+        }
+
+        td {
+            padding: 5px;
+        }
+
+        th {
+            padding: 5px;
+            background-color: #555;
+            color: #6f6;
+            text-align: center;
+            font-weight: bold;
+        }
+    </style>
+    <script src="../JS/Kit.js"></script>
+    <script>
+		function Parse()
+		{
+			var
+				form = $("form"),
+				sp = $("span", 0, 0, form),
+				qs = document.location.search;  // Query String
+			if (qs.length == 0)
+			{
+				sp.innerHTML = "This page parses OueryString<br/>OueryString is empty.";
+				return;
+			}
+			var
+				pp = qs.substr(1).split("&"),
+				htm = "<h3>Query parameters</h3><table bor-der='1'><tr><th><b>Key</b></th><th><b>Value</b></th></tr>";
+			for (var i = 0; i < pp.length; i++)
+			{
+				htm += "<tr>";
+				var p = pp[i].split("=");
+				p[0] = p[0].replace(/\+/g, " ");
+				p[1] = p[1].replace(/\+/g, " ");
+				htm += "<td>" + unescape(p[0]) + "</td><td>" + unescape(p[1]) + "</td></tr>";
+			}
+			htm += "</table>";
+			sp.innerHTML = htm;
+		}
+		onload = Parse;
+    </script>
+</head>
+<body>
+</body>
+</html>

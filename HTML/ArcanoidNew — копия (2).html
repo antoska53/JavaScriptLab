@@ -1,0 +1,413 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+	<meta charset="utf-8" />
+    <style>
+        .button {
+            border:double;
+            border-color: green;
+            color: green;       
+            opacity: 0.7;
+            padding: 5px 8px;
+            text-align: center;
+            background-color: black;
+            transition-duration: 0.4s;
+            box-shadow: 0 12px 16px 0 rgba(0,0,0,0.24),0 17px 50px 0 rgba(0,0,0,0.19);
+            font-size: 1.1em;
+            margin: 2px 6px;
+            cursor: pointer;
+        }
+
+            .button:hover {
+                opacity: 1;
+                transform: scale(1.04);
+            }
+            body{
+                background-color: dimgrey;
+            }
+    </style>
+</head>
+<body>
+    <script src="../JS/Kit.js"></script>
+    <script>
+        class Game {
+            constructor() {
+                var canvas = $("canvas", 'background=black;display=block;margin=0 auto', `id=myCanvas;width=480;height=320`);
+                this.width = (window.innerWidth - canvas.width) / 2 - 100;
+                var w = this.width;
+                var bStart = $("button", `position=absolute;left=${w}px;top=45px`, "id=start;innerText=Start;className=button;");
+                var bReload = $("button", `position=absolute;left=${w}px;top=95px`, "id=start;innerText=Reload;className=button;");
+                this.ctx = canvas.getContext("2d");
+                this.x = canvas.width / 2;
+                this.y = canvas.height - 30;
+                this.speed = 1;
+                this.coefLeft = 1;
+                this.coefRigth = 1;     //кэффицент изменения траектории
+                this.dx = -1;
+                this.dy = -1;
+                this.ballRadius = 10;
+                this.paddleHeight = 10;
+                this.paddleWidth = 100;
+                this.paddleX = (canvas.width - this.paddleWidth) / 2;
+                this.rightPressed = false;
+                this.leftPressed = false;
+                this.intervalID = 0;
+                this.busy = false;
+                this.gameOverFlag = false;
+
+                this.particles = [];        //массив искр
+                this.particlesCount = 20;   //количество искр
+                this.multiplier = -1;       // направление искр
+                this.flagParticle = false;  // флаг
+
+                this.bricks = null;
+                this.brickRowCount = 3;
+                this.brickColumnCount = 5;
+                this.brickWidth = 75;
+                this.brickHeight = 20;
+                this.brickPadding = 10;
+                this.brickOffsetTop = 30;
+                this.brickOffsetLeft = 30;
+                this.createBricks = false;
+
+                this.score = 0;
+
+                document.addEventListener("keydown", (e) => this.keyDownHandler(e));
+                document.addEventListener("keyup", (e) => this.keyUpHandler(e));
+                canvas.addEventListener("mousemove", (e) => this.mouseMoveHandler(e));
+
+                            
+                bStart.onclick = () => this.OnStart();
+                bReload.onclick = () => this.reloadGame();
+                 
+                
+                
+
+            }
+
+           
+            mouseMoveHandler(e) {
+                
+                this.coef = 2;
+                let canv = O.query("#myCanvas");
+                
+                var relativeX = e.clientX - canv.offsetLeft;
+                
+                    if (relativeX > 0 && relativeX < canv.width) {
+                        this.paddleX = relativeX - this.paddleWidth / 2;
+                        
+                        
+                    }
+                }
+
+            keyDownHandler(e) {
+                
+                if (e.keyCode == 39) {
+                    this.rightPressed = true;
+                    this.coefRigth = 2;
+                }
+                else if (e.keyCode == 37) {
+                    this.leftPressed = true;
+                    this.coefLeft = 2;
+                }
+               else if (e.keyCode == 32) {
+                   this.OnStart();
+                }
+            }
+
+            keyUpHandler(e) {
+                this.coefLeft = 1;
+                this.coefRigth = 1;
+                if (e.keyCode == 39) {
+                    this.rightPressed = false;
+                    
+                }
+                else if (e.keyCode == 37) {
+                    this.leftPressed = false;
+                }
+            }
+
+          
+            ballMove() {                            //движение шара
+                this.x += this.dx * this.speed;
+                this.y += this.dy * this.speed;
+            }
+
+            ballVector(dataX, dataY) {              //направление движения
+                this.dx = dataX;
+                this.dy = dataY;
+
+                let len = Math.sqrt(this.dx * this.dx + this.dy * this.dy); //длина вектора
+                this.dx /= len;     //нормализация вектора
+                this.dy /= len;
+            }
+
+
+            draw() {
+                let canv = O.query("#myCanvas");
+                this.ctx.clearRect(0, 0, canv.width, canv.height);
+                
+
+
+                this.drawBall();
+                this.drawPaddle();
+                this.drawBricks();
+                this.collisionDetection()
+                this.drawScore();
+                this.drawAnim();
+               
+                
+                if (this.y + this.dy < this.ballRadius) {                   //отскок шарика от краев
+                    
+                    this.dy = -this.dy;
+                    
+                }
+                if (this.y + this.dy > canv.height - this.ballRadius) {
+                    if (this.x > this.paddleX && this.x < this.paddleX + this.paddleWidth) {        //отскок от ракетки
+                        this.particles = [];                                                    //очищаем массив
+                        for (var k = 0; k < this.particlesCount; k++) {
+
+                            this.particles.push(new Particle(this.x, this.y, this.multiplier)); //анимация
+
+                        }
+                        this.flagParticle = true; //анимация
+                    
+                        if (this.dx < 0) {                                      //изменение траектории шара
+                            this.ballVector(-this.coefRigth, this.coefLeft);
+                            this.speed = 1.5;
+                        }
+                        if (this.dx > 0) {
+                            this.ballVector(this.coefRigth, this.coefLeft);
+                            this.speed = 1.5;
+                        }
+                      
+                      
+
+                      this.dy = -this.dy;
+                        
+                    }
+                    else {
+                        this.gameOver(true);
+                    }
+                }
+                if (this.x + this.dx < this.ballRadius) {
+                    this.dx = -this.dx;
+                }
+                if (this.x + this.dx > canv.width - this.ballRadius) {
+                    this.dx = -this.dx;
+                }
+
+                if (this.rightPressed && this.paddleX < canv.width - this.paddleWidth) { //ограничение двжения ракетки по оси Х
+                    this.paddleX += 7;
+                }
+                else if (this.leftPressed && this.paddleX > 0) {
+                    this.paddleX -= 7;
+                }
+
+               this.ballMove();
+            }
+
+            drawAnim() {
+                if (this.flagParticle) {                                //анимация
+                    for (var k = 0; k < this.particlesCount; k++) {
+                        this.particles[k].draw();
+
+                    }
+                    //this.flagParticle = false;
+                }
+            }
+
+            drawBall() {
+                
+                this.ctx.beginPath();
+                this.ctx.arc(this.x, this.y, this.ballRadius, 0, Math.PI * 2);
+                this.ctx.fillStyle = "green";
+                this.ctx.fill();
+                this.ctx.closePath();
+            }
+
+            drawScore() {
+                this.ctx.font = "16px Arial";
+                this.ctx.fillStyle = "lime";
+                this.ctx.fillText("Score: " + this.score, 8, 20);
+            }
+
+            drawPaddle() {
+                let canv = O.query("#myCanvas");
+                this.ctx.beginPath();
+                this.ctx.rect(this.paddleX, canv.height - this.paddleHeight, this.paddleWidth, this.paddleHeight);
+                this.ctx.fillStyle = "green";
+                this.ctx.fill();
+                this.ctx.closePath();
+            }
+
+          
+
+            drawBricks() {
+               
+                if (!this.createBricks) {
+                    this.bricks = [];
+                    for (let c = 0; c < this.brickColumnCount; c++) {
+                        this.bricks[c] = [];
+                        for (let r = 0; r < this.brickRowCount; r++) {
+                            this.bricks[c][r] = new Brick();
+                        }
+                    }
+                    this.createBricks = true;
+                }
+                for (let c = 0; c < this.brickColumnCount; c++) {
+                    for (let r = 0; r < this.brickRowCount; r++) {
+                        
+                        if (this.bricks[c][r].status == 1) {
+                            let brickX = (c * (this.brickWidth + this.brickPadding)) + this.brickOffsetLeft;
+                            let brickY = (r * (this.brickHeight + this.brickPadding)) + this.brickOffsetTop;
+                            this.bricks[c][r].x = brickX;
+                            this.bricks[c][r].y = brickY;
+                            this.bricks[c][r].draw();
+                           }
+                    }
+                }
+            }
+
+            collisionDetection() {                 //столкновение с кирпичом
+                for (let c = 0; c < this.brickColumnCount; c++) {
+                    for (let r = 0; r < this.brickRowCount; r++) {
+                        let b = this.bricks[c][r];
+                        if (b.status == 1) {
+                            if (this.x > b.x && this.x < b.x + this.brickWidth && this.y > b.y && this.y < b.y + this.brickHeight) {
+                                this.particles = [];
+                                for (var k = 0; k < this.particlesCount; k++) {
+
+                                    this.particles.push(new Particle(this.x, this.y, -this.multiplier)); //анимация
+
+                                }
+                                this.dy = -this.dy;
+                                b.status = 0;
+                                this.score++;
+                                if (this.score == this.brickRowCount * this.brickColumnCount) {
+                                                                        
+                                    this.gameOver(false);
+                                   
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Start() {
+                if (!this.gameOverFlag) {
+                    this.intervalID = setInterval(() => this.draw(), 10);
+                }
+            }
+
+            OnStart() {
+                                
+                clearInterval(this.intervalID);
+                
+                let btn = O.query("#start");
+                this.busy = !this.busy;
+                if (!this.busy) {
+                    btn.innerText = "Start";
+                    clearInterval(this.intervalID);
+                }
+                else {
+                    btn.innerText = "Stop";
+                    this.Start();
+                }
+            }
+
+            gameOver(data) {
+
+                clearInterval(this.intervalID);
+               
+                let btn = O.query("#start");
+                btn.innerText = "Start";
+                this.busy = !this.busy;
+                this.gameOverFlag = true;
+
+                let canv = O.query("#myCanvas");
+                this.x = canv.width / 2;
+                this.y = canv.height - 30;
+                this.paddleX = (canv.width - this.paddleWidth) / 2;
+                this.ctx.beginPath();
+                //this.ctx.fillStlye = "white";
+                this.ctx.font = "20px Arial";
+                this.ctx.textAlign = "center";
+                this.ctx.textBaseline = "middle";
+                if (data) {
+                    this.ctx.fillStlye = "red";
+                    this.ctx.fillText("Game Over - You scored " + this.score + " points!", canv.width / 2, canv.height / 2);
+                }
+                else {
+                    this.ctx.fillStlye = "lime";
+                    this.ctx.fillText("You Win - You scored " + this.score + " points!", canv.width / 2, canv.height / 2);
+                }
+                this.ctx.closePath();
+            }
+
+            reloadGame() {
+                document.location.reload();
+            }
+        }
+
+        class Brick {
+            constructor() {
+                this.brickWidth = 75;
+                this.brickHeight = 20;
+                this.x = 0;
+                this.y = 0;
+                this.status = 1;
+            }
+            draw() {
+                var canv = O.query("#myCanvas");
+                var ctx = canv.getContext("2d");
+                ctx.beginPath();
+                ctx.rect(this.x, this.y, this.brickWidth, this.brickHeight);
+                ctx.strokeStyle = "lime";
+                ctx.stroke();
+                ctx.closePath();
+            }
+        }
+
+        class Particle {                        //Искры
+            constructor(x, y, m) {
+                this.x = x;
+                this.y = y;
+                this.radius = 1.2;
+                this.vx = -1.5 + Math.random() * 3;
+                this.vy = m * Math.random() * 1.5;
+            }
+
+            draw() {
+                var canv = O.query("#myCanvas");
+                var ctx = canv.getContext("2d");
+               
+                ctx.beginPath();
+                ctx.fillStyle = "white";
+                if (this.radius > 0) {
+                      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
+                 }
+                ctx.fill();
+
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // уменьшение радиуса
+                this.radius = Math.max(this.radius - 0.05, 0.0);
+
+               
+            }
+        }
+
+
+        let game = null;
+        onload = () => {
+            game = new Game();
+            game.draw();
+        }
+    </script>
+
+</body>
+</html>

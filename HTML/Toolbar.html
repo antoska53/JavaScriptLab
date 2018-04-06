@@ -1,0 +1,51 @@
+﻿<html>
+<head>
+    <title>Toolbar</title>
+    <link rel="icon" type="image/png" href="../Images/favicon.png" />
+    <style>
+        .over {
+            border: 1px solid black;
+        }
+
+        .out {
+            border: 1px solid white;
+        }
+
+        .sel {
+            border: 1px solid red;
+        }
+
+        .green {
+            font-family: Comic Sans MS;
+            color: green;
+        }
+    </style>
+    <script src="../js/Kit.js"></script>
+    <script>
+		function Init()
+		{
+			let
+				names = ["Cut", "Copy", "Paste", "Color", "Underline", "Bold", "VerticalText"];
+				toolbar = $("div", "padding=2px;margin=2px;border=2px outset #eec;overflow=hidden;"),
+				msg = $("span", 0, "className=green;");
+			for (let i = 0; i < names.length; i++)
+			{
+				let
+					n = names[i],
+					img = $("img", 0, `src=../Images/${n}.gif;title=${n};className=out;`, toolbar);
+				img.onmouseover = (e) => e.target.className="over";
+				img.onmousedown = (e) =>
+				{
+					e.target.className = "sel";
+					msg.innerText = `You selected command: ${e.target.title}`;
+				}
+				img.onmouseout = (e) => { e.target.className="out"; msg.innerText = ""; }
+			}
+		}
+		onload = Init;
+    </script>
+</head>
+<body>
+</body>
+</html>
+
